@@ -72,8 +72,36 @@ const createWindow = async () => {
     }
   });
 
-  // mainWindow.loadURL(`file://${__dirname}/app.html`);
-  mainWindow.loadURL('http://localhost:8081/index.html');
+  mainWindow.loadURL('http://demo.exam.zykj.org/electron/index.html');
+
+  mainWindow.webContents.session.on(
+    'will-download',
+    (event, item, webContents) => {
+      event.preventDefault();
+      //console.log('will-download'+item.getURL());
+      //执行自己的下载操作
+      const path = require('electron').remote.dialog.showOpenDialogSync({
+        properties: ['openDirectory']
+      });
+      if (path && path[0]) {
+        const writeStream = require('fs').createWriteStream(
+          require('path').join(
+            path[0],
+            `${this.props.stemAnswerSheet.title}.pdf`
+          )
+        );
+        writeStream.on('finish', () => {});
+        require('http').get(item.getURL(), (res: any) => {
+          res.pipe(writeStream);
+        });
+        return;
+      }
+    }
+  );
+  // mainWindow.loadURL(
+  //   `file:///Users/kww/work/ezy/Ezy.Web.SchoolControlPanel/build/index.html`
+  // );
+  // mainWindow.loadURL('http://localhost:8081/index.html');
 
   // @TODO: Use 'ready-to-show' event
   //        https://github.com/electron/electron/blob/master/docs/api/browser-window.md#using-ready-to-show-event
@@ -127,10 +155,10 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
   if (data.type === 'pdfUrl') {
     const urlInfo = data.data;
     console.log(urlInfo);
-    urlInfo.url = urlInfo.url.replace(
-      'localhost:8081',
-      'demo.exam.zykj.org/dev'
-    );
+    urlInfo.url = `http://demo.exam.zykj.org/dev/index.html${urlInfo.url.substring(
+      urlInfo.url.indexOf('#')
+    )}`;
+    console.log(urlInfo.url);
     const pdf = await html2pdf(urlInfo);
     console.log(pdf);
     const client = createOssClient();
