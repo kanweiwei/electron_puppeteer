@@ -11,13 +11,12 @@
  * @flow
  */
 import { app, BrowserWindow, dialog, screen } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import MenuBuilder from './menu';
+import { autoUpdater } from 'electron-updater';
 import queryString from 'query-string';
 import html2pdf from './html2pdf';
-import { fstat } from 'fs';
-const puppeteer = require('puppeteer');
+import MenuBuilder from './menu';
+
 const fs = require('fs');
 const OSS = require('ali-oss');
 
@@ -67,37 +66,15 @@ const createWindow = async () => {
     height,
     resizable: true,
     webPreferences: {
-      nodeIntegration: true
+      nodeIntegration: true,
+      nativeWindowOpen: true
       // devTools: false
     }
   });
 
-  mainWindow.loadURL('http://demo.exam.zykj.org/electron/index.html');
+  // mainWindow.loadURL('http://demo.exam.zykj.org/electron/index.html');
+  mainWindow.loadURL('http://localhost:8081/');
 
-  mainWindow.webContents.session.on(
-    'will-download',
-    (event, item, webContents) => {
-      event.preventDefault();
-      //console.log('will-download'+item.getURL());
-      //执行自己的下载操作
-      const path = require('electron').remote.dialog.showOpenDialogSync({
-        properties: ['openDirectory']
-      });
-      if (path && path[0]) {
-        const writeStream = require('fs').createWriteStream(
-          require('path').join(
-            path[0],
-            `${this.props.stemAnswerSheet.title}.pdf`
-          )
-        );
-        writeStream.on('finish', () => {});
-        require('http').get(item.getURL(), (res: any) => {
-          res.pipe(writeStream);
-        });
-        return;
-      }
-    }
-  );
   // mainWindow.loadURL(
   //   `file:///Users/kww/work/ezy/Ezy.Web.SchoolControlPanel/build/index.html`
   // );
@@ -141,11 +118,22 @@ const createOssClient = () => {
       region: ossConfig.region,
       bucket: ossConfig.bucket,
       // endpoint: ossConfig.endpoint
-      endpoint: 'http://oss-cn-hangzhou.aliyuncs.com'
+      endpoint: `http://${ossConfig.region}.aliyuncs.com`
     });
   }
   return null;
 };
+
+const TARGET_HTML = 'http://demo.exam.zykj.org/dev/index.html';
+
+async function getPdfFile(urlInfo) {
+  // eslint-disable-next-line no-param-reassign
+  urlInfo.url = `${TARGET_HTML}${urlInfo.url.substring(
+    urlInfo.url.indexOf('#')
+  )}`;
+  const pdf = await html2pdf(urlInfo);
+  return pdf;
+}
 
 // 在主进程中.
 const { ipcMain } = require('electron');
@@ -153,19 +141,36 @@ const { ipcMain } = require('electron');
 ipcMain.on('asynchronous-message', async (event, arg) => {
   const data = JSON.parse(arg);
   if (data.type === 'pdfUrl') {
-    const urlInfo = data.data;
-    console.log(urlInfo);
-    urlInfo.url = `http://demo.exam.zykj.org/dev/index.html${urlInfo.url.substring(
-      urlInfo.url.indexOf('#')
-    )}`;
-    console.log(urlInfo.url);
-    const pdf = await html2pdf(urlInfo);
-    console.log(pdf);
+    // 保存答题卡
+    const pdf = await getPdfFile(data.data);
     const client = createOssClient();
-    const url = await client.put(`/pdf/${urlInfo.id}/pdf.pdf`, pdf);
+    if (client) {
+      await client.put(`/pdf/${data.data.id}/pdf.pdf`, pdf);
+    }
     event.reply('asynchronous-reply', 'success');
+  } else if (data.type === 'download-pdf') {
+    try {
+      const pdf = await getPdfFile(data.data);
+      const path = require('electron').dialog.showOpenDialogSync({
+        properties: ['openDirectory']
+      });
+      if (path && path[0]) {
+        fs.writeFileSync(
+          require('path').join(
+            path[0],
+            `${decodeURIComponent(data.data.name)}.pdf`
+          ),
+          pdf
+        );
+        event.reply('asynchronous-reply', 'success');
+      } else {
+        event.reply('asynchronous-reply', 'cancel');
+      }
+    } catch (error) {
+      console.log(error);
+      event.reply('asynchronous-reply', 'error');
+    }
   }
-  event.reply('asynchronous-reply', 'pong');
 });
 
 ipcMain.on('synchronous-message', (event, arg) => {
@@ -173,6 +178,7 @@ ipcMain.on('synchronous-message', (event, arg) => {
   if (data.type === 'oss') {
     ossConfig = data.data;
   }
+  // eslint-disable-next-line no-param-reassign
   event.returnValue = 'success';
 });
 
@@ -180,28 +186,26 @@ ipcMain.on('synchronous-message', (event, arg) => {
 const protocol = 'ezy-web-tool';
 app.setAsDefaultProtocolClient(protocol);
 app.on('open-url', async (e, url) => {
-  const params = url.replace(`${protocol}://`, '');
-  const pdf = await html2pdf(queryString.parse(params));
-  fs.writeFileSync('/Users/kww/work/xxx.pdf', pdf);
-  mainWindow.show();
-  mainWindow.focus();
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    message: '答题卡已保存'
+  const params = queryString.parse(url.replace(`${protocol}://`, ''));
+  const pdf = await html2pdf(params);
+  const path = require('electron').dialog.showOpenDialogSync({
+    properties: ['openDirectory']
   });
-  // dialog
-  //   .showOpenDialog(mainWindow, {
-  //     properties: ['openDirectory']
-  //   })
-  //   .then(result => {
-  //     console.log(result.canceled);
-  //     console.log(result.filePaths);
-  //     if (!result.canceled) {
-  //     }
-  //   })
-  //   .catch(err => {
-  //     console.log(err);
-  //   });
+  if (path && path[0]) {
+    fs.writeFileSync(
+      require('path').join(path[0], `${decodeURIComponent(params.name)}.pdf`),
+      pdf
+    );
+    // e.reply('asynchronous-reply', 'success');
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      message: '答题卡已保存'
+    });
+  }
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
 });
 
 /**

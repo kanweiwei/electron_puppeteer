@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const uuidv1 = require('uuid/v1');
 const Promise = require('bluebird');
+
 const unlinkAsync = Promise.promisify(fs.unlink);
 const html2pdf = async ({
   url,
@@ -17,7 +18,7 @@ const html2pdf = async ({
       headless: true
     });
     const page = await browser.newPage();
-    let subUrl = url.substring(0, url.indexOf('#'));
+    const subUrl = url.substring(0, url.indexOf('#'));
     await page.goto(subUrl, { waitUntil: 'networkidle0' });
     await page.evaluate(
       (a, b, c, d) => {
@@ -37,22 +38,24 @@ const html2pdf = async ({
     );
     await page.goto(url, { waitUntil: 'networkidle0' });
     await page.waitForFunction(() => {
-      let stem = document.querySelector('.answer-sheet--stem');
-      let nostem = document.querySelector('.answer-sheet--nostem');
-      let loading = document.querySelector('.ant-spin');
+      const stem = document.querySelector('.answer-sheet--stem');
+      const nostem = document.querySelector('.answer-sheet--nostem');
+      const loading = document.querySelector('.ant-spin');
 
       return !loading && (stem || nostem);
     });
     await Promise.delay(1000);
     await page.evaluate(s => {
-      var tmp = document.querySelector('.answer-sheet-container').innerHTML;
+      const tmp = document.querySelector('.answer-sheet-container').innerHTML;
       document.body.innerHTML = tmp;
       if (Number(s) === 2) {
-        let doms = Array.prototype.slice.call(
+        const doms = Array.prototype.slice.call(
           document.querySelectorAll('.answer-sheet')
         );
         doms.forEach(dom => {
+          // eslint-disable-next-line no-param-reassign
           dom.style.marginTop = '0px';
+          // eslint-disable-next-line no-param-reassign
           dom.style.float = 'left';
         });
       }
@@ -68,11 +71,11 @@ const html2pdf = async ({
     await page.waitFor(500);
     const uuid = uuidv1().replace(/-/g, '');
     const path = `${uuid}.pdf`;
-    let pdfBuffer = await page.pdf({
+    const pdfBuffer = await page.pdf({
       path,
       format: Number(printSize) === 1 ? 'A4' : 'A3',
       printBackground: true,
-      landscape: Number(printSize) === 1 ? false : true,
+      landscape: Number(printSize) !== 1,
       scale: 0.95
     });
     await browser.close();
