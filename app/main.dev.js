@@ -16,6 +16,7 @@ import { autoUpdater } from 'electron-updater';
 import queryString from 'query-string';
 import html2pdf from './html2pdf';
 import MenuBuilder from './menu';
+import commonPdf from './common-pdf';
 
 const fs = require('fs');
 const OSS = require('ali-oss');
@@ -45,7 +46,8 @@ if (
 const installExtensions = async () => {
   const installer = require('electron-devtools-installer');
   const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS', 'REDUX_DEVTOOLS'];
+  // const extensions = ['REACT_DEVELOPER_TOOLS', 'REDUX_DEVTOOLS'];
+  const extensions = [];
 
   return Promise.all(
     extensions.map(name => installer.default(installer[name], forceDownload))
@@ -61,27 +63,26 @@ const createWindow = async () => {
   }
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   mainWindow = new BrowserWindow({
+    backgroundColor: '#2e2c29',
     show: false,
     width,
     height,
     resizable: true,
     webPreferences: {
       nodeIntegration: true,
-      nativeWindowOpen: true
+      nodeIntegrationInWorker: true
+      // nativeWindowOpen: true
       // devTools: false
     }
   });
 
-  // mainWindow.loadURL('http://demo.exam.zykj.org/electron/index.html');
-  mainWindow.loadURL('http://localhost:8081/');
+  mainWindow.loadURL('http://demo.exam.zykj.org/electron/index.html');
+  // mainWindow.loadURL('http://localhost:8081/');
 
   // mainWindow.loadURL(
   //   `file:///Users/kww/work/ezy/Ezy.Web.SchoolControlPanel/build/index.html`
   // );
-  // mainWindow.loadURL('http://localhost:8081/index.html');
 
-  // @TODO: Use 'ready-to-show' event
-  //        https://github.com/electron/electron/blob/master/docs/api/browser-window.md#using-ready-to-show-event
   mainWindow.webContents.on('did-finish-load', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
@@ -98,6 +99,31 @@ const createWindow = async () => {
     mainWindow = null;
   });
 
+  mainWindow.webContents.on(
+    'new-window',
+    (event, url, frameName, disposition, options) => {
+      event.preventDefault();
+      const win = new BrowserWindow({
+        webContents: options.webContents, // use existing webContents if provided
+        show: false,
+        webPreferences: {
+          nodeIntegration: true,
+          nodeIntegrationInWorker: true,
+          nativeWindowOpen: true
+        }
+      });
+      win.once('ready-to-show', () => win.show());
+      if (!options.webContents) {
+        win.loadURL(url); // existing webContents will be navigated automatically
+      }
+      win.webContents.session.on('will-download', (e, item, contents) => {
+        console.log(e, item, contents);
+      });
+      // eslint-disable-next-line no-param-reassign
+      event.newGuest = win;
+    }
+  );
+
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
 
@@ -106,7 +132,7 @@ const createWindow = async () => {
   new AppUpdater();
 };
 
-let ossConfig: any;
+let ossConfig;
 
 const createOssClient = () => {
   if (ossConfig) {
@@ -135,41 +161,59 @@ async function getPdfFile(urlInfo) {
   return pdf;
 }
 
+async function getCommonPdfFile(urlInfo) {
+  // eslint-disable-next-line no-param-reassign
+  urlInfo.url = `${TARGET_HTML}${urlInfo.url.substring(
+    urlInfo.url.indexOf('#')
+  )}`;
+  const pdf = await commonPdf(urlInfo);
+  return pdf;
+}
+
 // 在主进程中.
 const { ipcMain } = require('electron');
 // 异步消息
 ipcMain.on('asynchronous-message', async (event, arg) => {
   const data = JSON.parse(arg);
-  if (data.type === 'pdfUrl') {
-    // 保存答题卡
-    const pdf = await getPdfFile(data.data);
-    const client = createOssClient();
-    if (client) {
-      await client.put(`/pdf/${data.data.id}/pdf.pdf`, pdf);
-    }
-    event.reply('asynchronous-reply', 'success');
-  } else if (data.type === 'download-pdf') {
-    try {
-      const pdf = await getPdfFile(data.data);
-      const path = require('electron').dialog.showOpenDialogSync({
-        properties: ['openDirectory']
-      });
-      if (path && path[0]) {
-        fs.writeFileSync(
-          require('path').join(
-            path[0],
-            `${decodeURIComponent(data.data.name)}.pdf`
-          ),
-          pdf
-        );
+  let pdf;
+  try {
+    switch (data.type) {
+      case 'pdfUrl': {
+        // 保存答题卡
+        pdf = await getPdfFile(data.data);
+        const client = createOssClient();
+        if (client) {
+          await client.put(`/pdf/${data.data.id}/pdf.pdf`, pdf);
+        }
         event.reply('asynchronous-reply', 'success');
-      } else {
-        event.reply('asynchronous-reply', 'cancel');
+        break;
       }
-    } catch (error) {
-      console.log(error);
-      event.reply('asynchronous-reply', 'error');
+      case 'download-pdf': {
+        pdf = await getPdfFile(data.data);
+      }
+      // eslint-disable-next-line no-fallthrough
+      case 'download-common-pdf': {
+        pdf = await getCommonPdfFile(data.data);
+      }
+      // eslint-disable-next-line no-fallthrough
+      default: {
+        if (pdf) {
+          const path = require('electron').dialog.showSaveDialogSync({
+            properties: ['openDirectory']
+          });
+          if (path) {
+            fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
+            event.reply('asynchronous-reply', 'success');
+          } else {
+            event.reply('asynchronous-reply', 'cancel');
+          }
+        }
+
+        break;
+      }
     }
+  } catch (error) {
+    event.reply('asynchronous-reply', 'error');
   }
 });
 
@@ -188,14 +232,11 @@ app.setAsDefaultProtocolClient(protocol);
 app.on('open-url', async (e, url) => {
   const params = queryString.parse(url.replace(`${protocol}://`, ''));
   const pdf = await html2pdf(params);
-  const path = require('electron').dialog.showOpenDialogSync({
+  const path = require('electron').dialog.showSaveDialogSync({
     properties: ['openDirectory']
   });
-  if (path && path[0]) {
-    fs.writeFileSync(
-      require('path').join(path[0], `${decodeURIComponent(params.name)}.pdf`),
-      pdf
-    );
+  if (path) {
+    fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
     // e.reply('asynchronous-reply', 'success');
     dialog.showMessageBox(mainWindow, {
       type: 'info',
