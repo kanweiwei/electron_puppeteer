@@ -10,26 +10,14 @@
  *
  * @flow
  */
-import { app, BrowserWindow, dialog, screen } from 'electron';
-import log from 'electron-log';
-import { autoUpdater } from 'electron-updater';
+import { app, dialog } from 'electron';
 import queryString from 'query-string';
-import html2pdf from './html2pdf';
-import MenuBuilder from './menu';
-import commonPdf from './common-pdf';
+import html2pdf from './desktop/html2pdf';
+import commonPdf from './desktop/common-pdf';
+import createWindow, { getMainWindow } from './desktop/createWindow';
+import createOssClient, { setOssConfig } from './desktop/ossConfig';
 
 const fs = require('fs');
-const OSS = require('ali-oss');
-
-export default class AppUpdater {
-  constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify();
-  }
-}
-
-let mainWindow = null;
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -42,113 +30,6 @@ if (
 ) {
   require('electron-debug')();
 }
-
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  // const extensions = ['REACT_DEVELOPER_TOOLS', 'REDUX_DEVTOOLS'];
-  const extensions = [];
-
-  return Promise.all(
-    extensions.map(name => installer.default(installer[name], forceDownload))
-  ).catch(console.log);
-};
-
-const createWindow = async () => {
-  if (
-    process.env.NODE_ENV === 'development' ||
-    process.env.DEBUG_PROD === 'true'
-  ) {
-    await installExtensions();
-  }
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  mainWindow = new BrowserWindow({
-    backgroundColor: '#2e2c29',
-    show: false,
-    width,
-    height,
-    resizable: true,
-    webPreferences: {
-      nodeIntegration: true,
-      nodeIntegrationInWorker: true
-      // nativeWindowOpen: true
-      // devTools: false
-    }
-  });
-
-  mainWindow.loadURL('http://demo.exam.zykj.org/electron/index.html');
-  // mainWindow.loadURL('http://localhost:8081/');
-
-  // mainWindow.loadURL(
-  //   `file:///Users/kww/work/ezy/Ezy.Web.SchoolControlPanel/build/index.html`
-  // );
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    if (!mainWindow) {
-      throw new Error('"mainWindow" is not defined');
-    }
-    if (process.env.START_MINIMIZED) {
-      mainWindow.minimize();
-    } else {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-
-  mainWindow.webContents.on(
-    'new-window',
-    (event, url, frameName, disposition, options) => {
-      event.preventDefault();
-      const win = new BrowserWindow({
-        webContents: options.webContents, // use existing webContents if provided
-        show: false,
-        webPreferences: {
-          nodeIntegration: true,
-          nodeIntegrationInWorker: true,
-          nativeWindowOpen: true
-        }
-      });
-      win.once('ready-to-show', () => win.show());
-      if (!options.webContents) {
-        win.loadURL(url); // existing webContents will be navigated automatically
-      }
-      win.webContents.session.on('will-download', (e, item, contents) => {
-        console.log(e, item, contents);
-      });
-      // eslint-disable-next-line no-param-reassign
-      event.newGuest = win;
-    }
-  );
-
-  const menuBuilder = new MenuBuilder(mainWindow);
-  menuBuilder.buildMenu();
-
-  // Remove this if your app does not use auto updates
-  // eslint-disable-next-line
-  new AppUpdater();
-};
-
-let ossConfig;
-
-const createOssClient = () => {
-  if (ossConfig) {
-    console.log(ossConfig);
-    return new OSS({
-      accessKeyId: ossConfig.accessKeyId,
-      accessKeySecret: ossConfig.accessKeySecret,
-      stsToken: ossConfig.securityToken,
-      region: ossConfig.region,
-      bucket: ossConfig.bucket,
-      // endpoint: ossConfig.endpoint
-      endpoint: `http://${ossConfig.region}.aliyuncs.com`
-    });
-  }
-  return null;
-};
 
 const TARGET_HTML = 'http://demo.exam.zykj.org/dev/index.html';
 
@@ -190,25 +71,37 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
       }
       case 'download-pdf': {
         pdf = await getPdfFile(data.data);
-      }
-      // eslint-disable-next-line no-fallthrough
-      case 'download-common-pdf': {
-        pdf = await getCommonPdfFile(data.data);
-      }
-      // eslint-disable-next-line no-fallthrough
-      default: {
         if (pdf) {
           const path = require('electron').dialog.showSaveDialogSync({
             properties: ['openDirectory']
           });
-          if (path) {
-            fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
+          if (!path.canceled) {
+            fs.writeFileSync(`${require('path').join(path.filePath)}.pdf`, pdf);
             event.reply('asynchronous-reply', 'success');
           } else {
             event.reply('asynchronous-reply', 'cancel');
           }
         }
-
+        break;
+      }
+      // eslint-disable-next-line no-fallthrough
+      case 'download-common-pdf': {
+        pdf = await getCommonPdfFile(data.data);
+        if (pdf) {
+          const path = require('electron').dialog.showSaveDialogSync({
+            properties: ['openDirectory']
+          });
+          if (!path.canceled) {
+            fs.writeFileSync(`${require('path').join(path.filePath)}.pdf`, pdf);
+            event.reply('asynchronous-reply', 'success');
+          } else {
+            event.reply('asynchronous-reply', 'cancel');
+          }
+        }
+        break;
+      }
+      // eslint-disable-next-line no-fallthrough
+      default: {
         break;
       }
     }
@@ -220,33 +113,10 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
 ipcMain.on('synchronous-message', (event, arg) => {
   const data = JSON.parse(arg);
   if (data.type === 'oss') {
-    ossConfig = data.data;
+    setOssConfig(data.data);
   }
   // eslint-disable-next-line no-param-reassign
   event.returnValue = 'success';
-});
-
-// 自定义协议
-const protocol = 'ezy-web-tool';
-app.setAsDefaultProtocolClient(protocol);
-app.on('open-url', async (e, url) => {
-  const params = queryString.parse(url.replace(`${protocol}://`, ''));
-  const pdf = await html2pdf(params);
-  const path = require('electron').dialog.showSaveDialogSync({
-    properties: ['openDirectory']
-  });
-  if (path) {
-    fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
-    // e.reply('asynchronous-reply', 'success');
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      message: '答题卡已保存'
-    });
-  }
-  if (mainWindow) {
-    mainWindow.show();
-    mainWindow.focus();
-  }
 });
 
 /**
@@ -266,5 +136,31 @@ app.on('ready', createWindow);
 app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
+  const mainWindow = getMainWindow();
   if (mainWindow === null) createWindow();
+});
+
+// 自定义协议
+const protocol = 'ezy-web-tool';
+app.setAsDefaultProtocolClient(protocol);
+app.on('open-url', async (e, url) => {
+  const params = queryString.parse(url.replace(`${protocol}://`, ''));
+  const pdf = await html2pdf(params);
+  const path = require('electron').dialog.showSaveDialogSync({
+    properties: ['openDirectory']
+  });
+  const mainWindow = getMainWindow();
+  if (!path.canceled) {
+    fs.writeFileSync(`${require('path').join(path.filePath)}.pdf`, pdf);
+    // e.reply('asynchronous-reply', 'success');
+
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      message: '答题卡已保存'
+    });
+  }
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
 });
