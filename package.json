@@ -56,8 +56,8 @@
     ]
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.develar.ElectronReact",
+    "productName": "中育深学",
+    "appId": "org.zykj.school.electronwebsite",
     "files": [
       "dist/",
       "node_modules/",
