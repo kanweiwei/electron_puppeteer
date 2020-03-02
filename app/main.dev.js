@@ -75,8 +75,8 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
           const path = require('electron').dialog.showSaveDialogSync({
             properties: ['openDirectory']
           });
-          if (!path.canceled) {
-            fs.writeFileSync(`${require('path').join(path.filePath)}.pdf`, pdf);
+          if (path) {
+            fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
             event.reply('asynchronous-reply', 'success');
           } else {
             event.reply('asynchronous-reply', 'cancel');
@@ -91,8 +91,8 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
           const path = require('electron').dialog.showSaveDialogSync({
             properties: ['openDirectory']
           });
-          if (!path.canceled) {
-            fs.writeFileSync(`${require('path').join(path.filePath)}.pdf`, pdf);
+          if (path) {
+            fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
             event.reply('asynchronous-reply', 'success');
           } else {
             event.reply('asynchronous-reply', 'cancel');
@@ -150,8 +150,8 @@ app.on('open-url', async (e, url) => {
     properties: ['openDirectory']
   });
   const mainWindow = getMainWindow();
-  if (!path.canceled) {
-    fs.writeFileSync(`${require('path').join(path.filePath)}.pdf`, pdf);
+  if (path) {
+    fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
     // e.reply('asynchronous-reply', 'success');
 
     dialog.showMessageBox(mainWindow, {
