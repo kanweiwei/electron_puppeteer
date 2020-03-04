@@ -1,3 +1,4 @@
+// @flow
 import { BrowserWindow, screen } from 'electron';
 import MenuBuilder from '../menu';
 import installExtensions from './installExtensions';
@@ -5,8 +6,8 @@ import installExtensions from './installExtensions';
 
 let mainWindow;
 
-const remoteUrl = 'http://demo.exam.zykj.org/electron';
-// const remoteUrl = 'http://localhost:8081';
+// const remoteUrl = 'http://demo.exam.zykj.org/electron';
+const remoteUrl = 'http://localhost:8081';
 
 const createWindow = async () => {
   if (

@@ -6,6 +6,17 @@ const Promise = require('bluebird');
 
 const unlinkAsync = Promise.promisify(fs.unlink);
 
+function getChromiumExecPath() {
+  return puppeteer.executablePath().replace('app.asar', 'app.asar.unpacked');
+}
+
+function createBrowser(options = {}) {
+  return puppeteer.launch({
+    ...options,
+    executablePath: getChromiumExecPath()
+  });
+}
+
 const commonHtml2pdf = async ({
   url,
   apiToken,
@@ -16,10 +27,7 @@ const commonHtml2pdf = async ({
 }) => {
   let browser;
   try {
-    if (url.indexOf('#') === -1) {
-      throw new Error('下载失败');
-    }
-    browser = await puppeteer.launch({
+    browser = await createBrowser({
       headless: true
     });
     const page = await browser.newPage();

@@ -103,7 +103,9 @@
       "owner": "electron-react-boilerplate",
       "repo": "electron-react-boilerplate",
       "private": false
-    }
+    },
+    "asar": true,
+    "asarUnpack": "node_modules/puppeteer/.local-chromium/**/*"
   },
   "repository": {
     "type": "git",

@@ -53,6 +53,21 @@ async function getCommonPdfFile(urlInfo) {
 
 // 在主进程中.
 const { ipcMain } = require('electron');
+
+// 保存pdf存入oss
+ipcMain.on('printPdf', async (event, arg) => {
+  const { id, options } = JSON.parse(arg);
+  const win = getMainWindow();
+  if (win) {
+    const pdf = await win.webContents.printToPDF(options);
+    const client = createOssClient();
+    if (client) {
+      await client.put(`/pdf/${id}/pdf.pdf`, pdf);
+    }
+    event.reply('printPdf-reply', 'success');
+  }
+});
+
 // 异步消息
 ipcMain.on('asynchronous-message', async (event, arg) => {
   const data = JSON.parse(arg);
@@ -164,3 +179,5 @@ app.on('open-url', async (e, url) => {
     mainWindow.focus();
   }
 });
+
+app.setAppLogsPath();

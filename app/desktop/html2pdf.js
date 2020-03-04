@@ -5,6 +5,18 @@ const uuidv1 = require('uuid/v1');
 const Promise = require('bluebird');
 
 const unlinkAsync = Promise.promisify(fs.unlink);
+
+function getChromiumExecPath() {
+  return puppeteer.executablePath().replace('app.asar', 'app.asar.unpacked');
+}
+
+function createBrowser(options = {}) {
+  return puppeteer.launch({
+    ...options,
+    executablePath: getChromiumExecPath()
+  });
+}
+
 const html2pdf = async ({
   url,
   apiToken,
@@ -14,7 +26,7 @@ const html2pdf = async ({
   printSize = 1
 }) => {
   try {
-    const browser = await puppeteer.launch({
+    const browser = await createBrowser({
       headless: true
     });
     const page = await browser.newPage();
