@@ -68,6 +68,32 @@ ipcMain.on('printPdf', async (event, arg) => {
   }
 });
 
+ipcMain.on('printCommonPdf', async (event, arg) => {
+  const { title, options } = JSON.parse(arg);
+  console.log({ title, options });
+  const win = getMainWindow();
+  if (win) {
+    try {
+      const pdf = await win.webContents.printToPDF(options);
+      const path = require('electron').dialog.showSaveDialogSync({
+        properties: ['openDirectory'],
+        options: {
+          title
+        }
+      });
+      if (path) {
+        fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
+        event.reply('printCommonPdf-reply', 'success');
+      } else {
+        event.reply('printCommonPdf-reply', 'cancel');
+      }
+    } catch (error) {
+      console.log(error);
+      event.reply('printCommonPdf-reply', 'failed');
+    }
+  }
+});
+
 // 异步消息
 ipcMain.on('asynchronous-message', async (event, arg) => {
   const data = JSON.parse(arg);
