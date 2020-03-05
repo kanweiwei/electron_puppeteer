@@ -70,7 +70,6 @@ ipcMain.on('printPdf', async (event, arg) => {
 
 ipcMain.on('printCommonPdf', async (event, arg) => {
   const { title, options } = JSON.parse(arg);
-  console.log({ title, options });
   const win = getMainWindow();
   if (win) {
     try {
@@ -92,6 +91,13 @@ ipcMain.on('printCommonPdf', async (event, arg) => {
       event.reply('printCommonPdf-reply', 'failed');
     }
   }
+});
+
+ipcMain.on('maximize', () => {
+  const win = getMainWindow();
+  win.resizable = true;
+  win.frame = false;
+  win.maximize();
 });
 
 // 异步消息

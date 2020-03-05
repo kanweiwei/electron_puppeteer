@@ -4,7 +4,7 @@ import MenuBuilder from '../menu';
 import installExtensions from './installExtensions';
 // import checkRemoteVersion from './checkRemoteVersion';
 
-let mainWindow;
+let mainWindow: BrowserWindow;
 
 // const remoteUrl = 'http://demo.exam.zykj.org/electron';
 const remoteUrl = 'http://localhost:8081';
@@ -18,11 +18,11 @@ const createWindow = async () => {
   }
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   mainWindow = new BrowserWindow({
-    backgroundColor: '#2e2c29',
     show: false,
-    width,
-    height,
-    resizable: true,
+    width: 300,
+    height: 340,
+    resizable: false,
+    frame: false,
     webPreferences: {
       nodeIntegration: true,
       nodeIntegrationInWorker: true
@@ -36,6 +36,8 @@ const createWindow = async () => {
   // mainWindow.loadURL(
   //   `file:///Users/kww/work/ezy/Ezy.Web.SchoolControlPanel/build/index.html`
   // );
+  mainWindow.webContents.session.clearCache();
+
   mainWindow.webContents.on('did-finish-load', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
