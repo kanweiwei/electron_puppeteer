@@ -10,7 +10,7 @@
  *
  * @flow
  */
-import { app, dialog } from 'electron';
+import { app, dialog, screen } from 'electron';
 import queryString from 'query-string';
 import html2pdf from './desktop/html2pdf';
 import commonPdf from './desktop/common-pdf';
@@ -93,11 +93,41 @@ ipcMain.on('printCommonPdf', async (event, arg) => {
   }
 });
 
-ipcMain.on('maximize', () => {
+ipcMain.on('go-to-login', () => {
+  const win = getMainWindow();
+  win.hide();
+  win.setSize(300, 340, true);
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const x = parseInt(width / 2 - 300 / 2, 10);
+  const y = parseInt(height / 2 - 340 / 2, 10);
+  win.setPosition(x, y);
+  win.show();
+});
+
+// 关闭
+ipcMain.on('win-close', () => {
+  const win = getMainWindow();
+  win.close();
+});
+
+// 最大化
+ipcMain.on('win-max', () => {
   const win = getMainWindow();
   win.resizable = true;
-  win.frame = false;
+  win.hide();
   win.maximize();
+  win.show();
+});
+// 最小化
+ipcMain.on('win-min', () => {
+  const win = getMainWindow();
+  win.resizable = true;
+  win.minimize();
+});
+// 全屏切换
+ipcMain.on('win-full-screen', () => {
+  const win = getMainWindow();
+  win.setFullScreen(!win.isFullScreen());
 });
 
 // 异步消息

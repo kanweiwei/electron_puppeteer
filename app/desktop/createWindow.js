@@ -16,6 +16,7 @@ const createWindow = async () => {
   ) {
     await installExtensions();
   }
+  // eslint-disable-next-line no-unused-vars
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   mainWindow = new BrowserWindow({
     show: false,
@@ -32,6 +33,7 @@ const createWindow = async () => {
   });
 
   mainWindow.loadURL(`${remoteUrl}/index.html`);
+
   // mainWindow.loadURL('http://localhost:8081/');
   // mainWindow.loadURL(
   //   `file:///Users/kww/work/ezy/Ezy.Web.SchoolControlPanel/build/index.html`
