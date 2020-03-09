@@ -1,5 +1,5 @@
 const http = require('http');
-const { dialog } = require('electron');
+const { dialog, app } = require('electron');
 
 function download(url) {
   return new Promise((resolve, reject) => {
@@ -48,10 +48,10 @@ function download(url) {
   });
 }
 
-export default async function checkRemoteVersion(remoteUrl) {
+export default async function checkRemoteVersion(address: string) {
   try {
     const { version: RemoteVersion } = await download(
-      `${remoteUrl}/version.json?$timestamp={+new Date()}`
+      `${address}/package.json?timestamp={+new Date()}`
     );
     console.log(RemoteVersion);
     // console.log(app.getPath('temp'));
@@ -61,6 +61,15 @@ export default async function checkRemoteVersion(remoteUrl) {
       message: '请检查网络'
     });
   }
-  const data = await download(`${remoteUrl}/version.json`);
+  const data = await download(
+    `${address}/package.json?timestamp=${+new Date()}`
+  );
   console.log(data);
+  // eslint-disable-next-line no-unused-vars
+  const curVersion = app.getVersion();
+  // if (curVersion === data.version) {
+  //   // eslint-disable-next-line no-useless-return
+  //   return;
+  // }
+  // 弹出一个自动更新界面
 }

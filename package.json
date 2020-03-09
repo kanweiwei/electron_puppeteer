@@ -97,40 +97,27 @@
     "directories": {
       "buildResources": "resources",
       "output": "release"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "electron-react-boilerplate",
-      "repo": "electron-react-boilerplate",
-      "private": false
-    },
-    "asar": true,
-    "asarUnpack": "node_modules/puppeteer/.local-chromium/**/*"
+    }
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/electron-react-boilerplate/electron-react-boilerplate.git"
+    "url": "git+https://github.com/kanweiwei/electron_puppeteer.git"
   },
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "electronreactboilerplate@gmail.com",
-    "url": "https://electron-react-boilerplate.js.org"
+    "name": "kanweiwei",
+    "email": "kwwnjujlc@sina.com",
+    "url": "https://github.com/kanweiwei"
   },
   "contributors": [
     {
-      "name": "Vikram Rangaraj",
-      "email": "vikr01@icloud.com",
-      "url": "https://github.com/vikr01"
-    },
-    {
-      "name": "Amila Welihinda",
-      "email": "amilajack@gmail.com",
-      "url": "https://github.com/amilajack"
+      "name": "kanweiwei",
+      "email": "kwwnjujlc@sina.com",
+      "url": "https://github.com/kanweiwei"
     }
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues"
+    "url": "https://github.com/kanweiwei/electron_puppeteer/issues"
   },
   "keywords": [
     "electron",
@@ -143,7 +130,7 @@
     "hot",
     "reload"
   ],
-  "homepage": "https://github.com/electron-react-boilerplate/electron-react-boilerplate#readme",
+  "homepage": "https://github.com/kanweiwei/electron_puppeteer#readme",
   "jest": {
     "testURL": "http://localhost/",
     "moduleNameMapper": {
@@ -198,12 +185,13 @@
     "babel-plugin-transform-react-remove-prop-types": "^0.4.24",
     "bufferutil": "^4.0.1",
     "chalk": "^3.0.0",
+    "compressing": "^1.5.0",
     "concurrently": "^5.0.1",
     "cross-env": "^6.0.3",
     "cross-spawn": "^7.0.1",
     "css-loader": "^3.3.2",
     "detect-port": "^1.3.0",
-    "electron": "7.1.4",
+    "electron": "8.0.1",
     "electron-builder": "^22.2.0",
     "electron-devtools-installer": "^2.2.4",
     "electron-rebuild": "^1.8.8",
@@ -290,7 +278,7 @@
     "yarn": ">=0.21.3"
   },
   "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
+    "url": ""
   },
   "browserslist": "electron 1.6",
   "husky": {

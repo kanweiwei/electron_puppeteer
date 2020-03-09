@@ -10,10 +10,8 @@
  *
  * @flow
  */
-import { app, dialog, screen } from 'electron';
+import { app, screen } from 'electron';
 import queryString from 'query-string';
-import html2pdf from './desktop/html2pdf';
-import commonPdf from './desktop/common-pdf';
 import createWindow, { getMainWindow } from './desktop/createWindow';
 import createOssClient, { setOssConfig } from './desktop/ossConfig';
 
@@ -29,26 +27,6 @@ if (
   process.env.DEBUG_PROD === 'true'
 ) {
   require('electron-debug')();
-}
-
-const TARGET_HTML = 'http://demo.exam.zykj.org/dev/index.html';
-
-async function getPdfFile(urlInfo) {
-  // eslint-disable-next-line no-param-reassign
-  urlInfo.url = `${TARGET_HTML}${urlInfo.url.substring(
-    urlInfo.url.indexOf('#')
-  )}`;
-  const pdf = await html2pdf(urlInfo);
-  return pdf;
-}
-
-async function getCommonPdfFile(urlInfo) {
-  // eslint-disable-next-line no-param-reassign
-  urlInfo.url = `${TARGET_HTML}${urlInfo.url.substring(
-    urlInfo.url.indexOf('#')
-  )}`;
-  const pdf = await commonPdf(urlInfo);
-  return pdf;
 }
 
 // 在主进程中.
@@ -131,63 +109,7 @@ ipcMain.on('win-full-screen', () => {
   win.setFullScreen(!win.isFullScreen());
 });
 
-// 异步消息
-ipcMain.on('asynchronous-message', async (event, arg) => {
-  const data = JSON.parse(arg);
-  let pdf;
-  try {
-    switch (data.type) {
-      case 'pdfUrl': {
-        // 保存答题卡
-        pdf = await getPdfFile(data.data);
-        const client = createOssClient();
-        if (client) {
-          await client.put(`/pdf/${data.data.id}/pdf.pdf`, pdf);
-        }
-        event.reply('asynchronous-reply', 'success');
-        break;
-      }
-      case 'download-pdf': {
-        pdf = await getPdfFile(data.data);
-        if (pdf) {
-          const path = require('electron').dialog.showSaveDialogSync({
-            properties: ['openDirectory']
-          });
-          if (path) {
-            fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
-            event.reply('asynchronous-reply', 'success');
-          } else {
-            event.reply('asynchronous-reply', 'cancel');
-          }
-        }
-        break;
-      }
-      // eslint-disable-next-line no-fallthrough
-      case 'download-common-pdf': {
-        pdf = await getCommonPdfFile(data.data);
-        if (pdf) {
-          const path = require('electron').dialog.showSaveDialogSync({
-            properties: ['openDirectory']
-          });
-          if (path) {
-            fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
-            event.reply('asynchronous-reply', 'success');
-          } else {
-            event.reply('asynchronous-reply', 'cancel');
-          }
-        }
-        break;
-      }
-      // eslint-disable-next-line no-fallthrough
-      default: {
-        break;
-      }
-    }
-  } catch (error) {
-    event.reply('asynchronous-reply', 'error');
-  }
-});
-
+// oss
 ipcMain.on('synchronous-message', (event, arg) => {
   const data = JSON.parse(arg);
   if (data.type === 'oss') {
@@ -222,21 +144,11 @@ app.on('activate', () => {
 const protocol = 'ezy-web-tool';
 app.setAsDefaultProtocolClient(protocol);
 app.on('open-url', async (e, url) => {
+  // eslint-disable-next-line no-unused-vars
   const params = queryString.parse(url.replace(`${protocol}://`, ''));
-  const pdf = await html2pdf(params);
-  const path = require('electron').dialog.showSaveDialogSync({
-    properties: ['openDirectory']
-  });
-  const mainWindow = getMainWindow();
-  if (path) {
-    fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
-    // e.reply('asynchronous-reply', 'success');
 
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      message: '答题卡已保存'
-    });
-  }
+  const mainWindow = getMainWindow();
+
   if (mainWindow) {
     mainWindow.show();
     mainWindow.focus();

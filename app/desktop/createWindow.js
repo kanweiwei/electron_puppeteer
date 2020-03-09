@@ -2,7 +2,7 @@
 import { BrowserWindow, screen } from 'electron';
 import MenuBuilder from '../menu';
 import installExtensions from './installExtensions';
-// import checkRemoteVersion from './checkRemoteVersion';
+import checkRemoteVersion from './checkRemoteVersion';
 
 let mainWindow: BrowserWindow;
 
@@ -83,7 +83,7 @@ const createWindow = async () => {
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
   // console.log(screen.getPrimaryDisplay().scaleFactor);
-  // checkRemoteVersion(remoteUrl);
+  checkRemoteVersion('http://demo.exam.zykj.org/electron_app');
 };
 
 export function getMainWindow() {
