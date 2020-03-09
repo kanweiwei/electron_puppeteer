@@ -101,6 +101,7 @@ ipcMain.on('go-to-login', () => {
   const x = parseInt(width / 2 - 300 / 2, 10);
   const y = parseInt(height / 2 - 340 / 2, 10);
   win.setPosition(x, y);
+  win.resizable = false;
   win.show();
 });
 

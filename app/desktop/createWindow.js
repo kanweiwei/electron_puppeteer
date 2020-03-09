@@ -39,7 +39,6 @@ const createWindow = async () => {
   //   `file:///Users/kww/work/ezy/Ezy.Web.SchoolControlPanel/build/index.html`
   // );
   mainWindow.webContents.session.clearCache();
-
   mainWindow.webContents.on('did-finish-load', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
