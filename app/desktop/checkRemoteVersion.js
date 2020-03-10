@@ -77,7 +77,7 @@ export default async function checkRemoteVersion() {
     const curVersion = app.getVersion();
     lastestVersion = data.version;
     productName = data.productName;
-    console.log(curVersion, data.version);
+
     if (curVersion === data.version) {
       return;
     }

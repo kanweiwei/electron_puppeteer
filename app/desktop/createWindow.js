@@ -61,6 +61,7 @@ const createWindow = async () => {
       event.preventDefault();
       const win = new BrowserWindow({
         webContents: options.webContents,
+        frame: false,
         show: false,
         webPreferences: {
           nodeIntegration: true,
