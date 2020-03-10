@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 
 const http = require('http');
-const { dialog, app } = require('electron');
+const { dialog, app, screen } = require('electron');
 
 let lastestVersion;
 let productName;
@@ -82,6 +82,14 @@ export default async function checkRemoteVersion() {
     }
     // 弹出一个自动更新界面
     const win = BrowserWindow.getFocusedWindow();
+    win.hide();
+    win.setSize(300, 340, true);
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+    const x = parseInt(width / 2 - 300 / 2, 10);
+    const y = parseInt(height / 2 - 340 / 2, 10);
+    win.setPosition(x, y);
+    win.resizable = false;
+    win.show();
     win.webContents.send('show-update', data.version);
   } catch (e) {
     dialog.showMessageBox({
