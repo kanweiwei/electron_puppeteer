@@ -10,7 +10,7 @@
  *
  * @flow
  */
-import { app, screen, ipcMain, dialog, shell } from 'electron';
+import { app, screen, ipcMain, dialog, shell, BrowserWindow } from 'electron';
 import queryString from 'query-string';
 import createWindow, { getMainWindow } from './desktop/createWindow';
 import createOssClient, { setOssConfig } from './desktop/ossConfig';
@@ -93,28 +93,36 @@ ipcMain.on('go-to-login', () => {
 
 // 关闭
 ipcMain.on('win-close', () => {
-  const win = getMainWindow();
-  win.close();
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) {
+    win.close();
+  }
 });
 
 // 最大化
 ipcMain.on('win-max', () => {
-  const win = getMainWindow();
-  win.resizable = true;
-  win.hide();
-  win.maximize();
-  win.show();
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) {
+    win.resizable = true;
+    win.hide();
+    win.maximize();
+    win.show();
+  }
 });
 // 最小化
 ipcMain.on('win-min', () => {
-  const win = getMainWindow();
-  win.resizable = true;
-  win.minimize();
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) {
+    win.resizable = true;
+    win.minimize();
+  }
 });
 // 全屏切换
 ipcMain.on('win-full-screen', () => {
-  const win = getMainWindow();
-  win.setFullScreen(!win.isFullScreen());
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) {
+    win.setFullScreen(!win.isFullScreen());
+  }
 });
 
 // oss

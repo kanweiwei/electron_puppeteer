@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron';
+import remoteUrl from './remoteUrl';
 
 const http = require('http');
 const { dialog, app, screen } = require('electron');
@@ -49,7 +50,6 @@ function download(url) {
         res.on('end', () => {
           try {
             const parsedData = JSON.parse(rawData);
-            console.log(parsedData);
             resolve(parsedData);
           } catch (e) {
             console.error(e.message);
@@ -77,20 +77,33 @@ export default async function checkRemoteVersion() {
     const curVersion = app.getVersion();
     lastestVersion = data.version;
     productName = data.productName;
+    console.log(curVersion, data.version);
     if (curVersion === data.version) {
       return;
     }
     // 弹出一个自动更新界面
     const win = BrowserWindow.getFocusedWindow();
-    win.hide();
-    win.setSize(300, 340, true);
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     const x = parseInt(width / 2 - 300 / 2, 10);
     const y = parseInt(height / 2 - 340 / 2, 10);
-    win.setPosition(x, y);
-    win.resizable = false;
-    win.show();
-    win.webContents.send('show-update', data.version);
+    const newWin = new BrowserWindow({
+      show: false,
+      parent: win,
+      width: 300,
+      height: 340,
+      resizable: false,
+      frame: false,
+      webPreferences: {
+        nodeIntegration: true,
+        nodeIntegrationInWorker: true,
+        devTools: false
+      }
+    });
+    newWin.setPosition(x, y);
+    newWin.loadURL(`${remoteUrl}/index.html#/electron_app_update`);
+    newWin.webContents.on('did-finish-load', () => {
+      newWin.show();
+    });
   } catch (e) {
     dialog.showMessageBox({
       title: '提示',

@@ -3,13 +3,9 @@ import { BrowserWindow, screen } from 'electron';
 import MenuBuilder from '../menu';
 import installExtensions from './installExtensions';
 import checkRemoteVersion from './checkRemoteVersion';
+import remoteUrl from './remoteUrl';
 
 let mainWindow: BrowserWindow;
-
-const remoteUrl =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:8081'
-    : 'http://demo.exam.zykj.org/electron';
 
 const createWindow = async () => {
   if (
