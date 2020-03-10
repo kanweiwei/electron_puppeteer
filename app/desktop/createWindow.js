@@ -6,8 +6,10 @@ import checkRemoteVersion from './checkRemoteVersion';
 
 let mainWindow: BrowserWindow;
 
-// const remoteUrl = 'http://demo.exam.zykj.org/electron';
-const remoteUrl = 'http://localhost:8081';
+const remoteUrl =
+  process.env.NODE_ENV === 'development'
+    ? 'http://localhost:8081'
+    : 'http://demo.exam.zykj.org/electron';
 
 const createWindow = async () => {
   if (
