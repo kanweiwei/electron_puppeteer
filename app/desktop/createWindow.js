@@ -46,6 +46,8 @@ const createWindow = async () => {
     if (process.env.START_MINIMIZED) {
       mainWindow.minimize();
     } else {
+      checkRemoteVersion();
+
       mainWindow.show();
       mainWindow.focus();
     }
@@ -68,7 +70,9 @@ const createWindow = async () => {
           nativeWindowOpen: true
         }
       });
-      win.once('ready-to-show', () => win.show());
+      win.once('ready-to-show', () => {
+        win.show();
+      });
       if (!options.webContents) {
         win.loadURL(url); // existing webContents will be navigated automatically
       }
@@ -83,7 +87,6 @@ const createWindow = async () => {
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
   // console.log(screen.getPrimaryDisplay().scaleFactor);
-  checkRemoteVersion('http://demo.exam.zykj.org/electron_app');
 };
 
 export function getMainWindow() {

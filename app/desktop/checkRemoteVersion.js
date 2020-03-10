@@ -1,5 +1,21 @@
+import { BrowserWindow } from 'electron';
+
 const http = require('http');
 const { dialog, app } = require('electron');
+
+let lastestVersion;
+let productName;
+
+export function getProductName() {
+  return productName;
+}
+
+const address =
+  'http://ezy-quick-exam-web.oss-cn-hangzhou.aliyuncs.com/electron_app';
+
+export function getAppDownloadDir() {
+  return address;
+}
 
 function download(url) {
   return new Promise((resolve, reject) => {
@@ -48,28 +64,29 @@ function download(url) {
   });
 }
 
-export default async function checkRemoteVersion(address: string) {
+export function getLastestVersion() {
+  return lastestVersion;
+}
+
+export default async function checkRemoteVersion() {
   try {
-    const { version: RemoteVersion } = await download(
+    const data = await download(
       `${address}/package.json?timestamp={+new Date()}`
     );
-    console.log(RemoteVersion);
-    // console.log(app.getPath('temp'));
+    // eslint-disable-next-line no-unused-vars
+    const curVersion = app.getVersion();
+    lastestVersion = data.version;
+    productName = data.productName;
+    if (curVersion === data.version) {
+      return;
+    }
+    // 弹出一个自动更新界面
+    const win = BrowserWindow.getFocusedWindow();
+    win.webContents.send('show-update', data.version);
   } catch (e) {
     dialog.showMessageBox({
       title: '提示',
       message: '请检查网络'
     });
   }
-  const data = await download(
-    `${address}/package.json?timestamp=${+new Date()}`
-  );
-  console.log(data);
-  // eslint-disable-next-line no-unused-vars
-  const curVersion = app.getVersion();
-  // if (curVersion === data.version) {
-  //   // eslint-disable-next-line no-useless-return
-  //   return;
-  // }
-  // 弹出一个自动更新界面
 }

@@ -10,12 +10,23 @@
  *
  * @flow
  */
-import { app, screen } from 'electron';
+import { app, screen, ipcMain, dialog, shell } from 'electron';
 import queryString from 'query-string';
 import createWindow, { getMainWindow } from './desktop/createWindow';
 import createOssClient, { setOssConfig } from './desktop/ossConfig';
+import {
+  getLastestVersion,
+  getAppDownloadDir,
+  getProductName
+} from './desktop/checkRemoteVersion';
 
-const fs = require('fs');
+const request = require('request');
+const progress = require('request-progress');
+const os = require('os');
+
+const path = require('path');
+const cp = require('child_process');
+const fs = require('fs-extra');
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -28,9 +39,6 @@ if (
 ) {
   require('electron-debug')();
 }
-
-// 在主进程中.
-const { ipcMain } = require('electron');
 
 // 保存pdf存入oss
 ipcMain.on('printPdf', async (event, arg) => {
@@ -52,14 +60,14 @@ ipcMain.on('printCommonPdf', async (event, arg) => {
   if (win) {
     try {
       const pdf = await win.webContents.printToPDF(options);
-      const path = require('electron').dialog.showSaveDialogSync({
+      const filePath = dialog.showSaveDialogSync({
         properties: ['openDirectory'],
         options: {
           title
         }
       });
-      if (path) {
-        fs.writeFileSync(`${require('path').join(path)}.pdf`, pdf);
+      if (filePath) {
+        fs.writeFileSync(`${require('path').join(filePath)}.pdf`, pdf);
         event.reply('printCommonPdf-reply', 'success');
       } else {
         event.reply('printCommonPdf-reply', 'cancel');
@@ -156,3 +164,70 @@ app.on('open-url', async (e, url) => {
 });
 
 app.setAppLogsPath();
+
+let installer;
+
+const platform = os.platform();
+
+ipcMain.on('update', async e => {
+  const version = getLastestVersion();
+
+  const dir = getAppDownloadDir();
+  let appDownUrl;
+  let appInstallName;
+  if (platform === 'darwin') {
+    appInstallName = `${getProductName()}-${version}.dmg`;
+    appDownUrl = `${dir}/${appInstallName}`;
+  }
+  if (appDownUrl && appInstallName) {
+    const file = path.join(app.getPath('temp'), appInstallName);
+    fs.exists(file, (exists: boolean) => {
+      if (exists) {
+        installer = file;
+        return e.reply('update-percent', JSON.stringify({ percent: 1 }));
+      }
+      progress(request(appDownUrl))
+        .on('progress', state => {
+          // 进度
+          // const { time, speed, percent, size } = state;
+          e.reply('update-percent', JSON.stringify(state));
+        })
+        .on('end', () => {
+          installer = file;
+          e.reply('update-percent', JSON.stringify({ percent: 1 }));
+        })
+        // 写入到临时文件夹
+        .pipe(
+          fs.createWriteStream(path.join(app.getPath('temp'), appInstallName))
+        );
+    });
+  }
+});
+
+ipcMain.on('start-install', () => {
+  const version = getLastestVersion();
+  if (platform === 'win32') {
+    shell.openItem(installer); // 打开下载好的安装程序
+    setTimeout(() => {
+      app.quit();
+    }, 1500);
+  }
+  if (platform === 'darwin') {
+    cp.execSync(`hdiutil attach ${installer}`, {
+      stdio: ['ignore', 'ignore', 'ignore']
+    });
+
+    // 覆盖原 app
+    cp.execSync(
+      `rm -rf '/Applications/${getProductName()}.app' && cp -R '/Volumes/${getProductName()} ${version}/${getProductName()}.app' '/Applications/${getProductName()}.app'`
+    );
+
+    // 卸载挂载的 dmg
+    cp.execSync(`hdiutil eject '/Volumes/${getProductName()} ${version}'`, {
+      stdio: ['ignore', 'ignore', 'ignore']
+    });
+    // 重启
+    app.relaunch();
+    app.quit();
+  }
+});
