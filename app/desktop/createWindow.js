@@ -61,25 +61,36 @@ const createWindow = async () => {
       event.preventDefault();
       const win = new BrowserWindow({
         webContents: options.webContents,
-        frame: false,
+        frame: !(url.indexOf(remoteUrl) > -1),
         show: false,
         webPreferences: {
-          nodeIntegration: true,
-          nodeIntegrationInWorker: true,
+          nodeIntegration: url.indexOf(remoteUrl) > -1,
+          nodeIntegrationInWorker: url.indexOf(remoteUrl) > -1,
           nativeWindowOpen: true
         }
       });
       win.once('ready-to-show', () => {
+        mainWindow.webContents.send('clear-loading');
+        win.maximize();
         win.show();
       });
       if (!options.webContents) {
         win.loadURL(url); // existing webContents will be navigated automatically
       }
-      win.webContents.session.on('will-download', (e, item, contents) => {
-        console.log(e, item, contents);
-      });
+
       // eslint-disable-next-line no-param-reassign
       event.newGuest = win;
+
+      // 监听跳转
+      win.webContents.on('will-navigate', (e, u) => {
+        const reg = /^(http|https):\/\/\w*\.school\.zykj\.org/;
+        if (reg.test(u) && u.indexOf('paperid') > -1) {
+          event.preventDefault();
+          const params = u.substring(u.indexOf('?'));
+          mainWindow.webContents.send('back-from-zjw', params);
+          event.newGuest.close();
+        }
+      });
     }
   );
 
