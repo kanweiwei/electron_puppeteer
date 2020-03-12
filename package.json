@@ -80,11 +80,15 @@
         }
       ]
     },
+    "mac": {
+      "icon": "resources/zyyx_logo_512.png"
+    },
     "win": {
       "target": [
         "nsis",
         "msi"
-      ]
+      ],
+      "icon": "resources/zyyx_logo_512.png"
     },
     "linux": {
       "target": [

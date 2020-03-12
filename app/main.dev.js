@@ -181,12 +181,14 @@ ipcMain.on('update', async e => {
   const version = getLastestVersion();
 
   const dir = getAppDownloadDir();
-  let appDownUrl;
   let appInstallName;
   if (platform === 'darwin') {
     appInstallName = `${getProductName()}-${version}.dmg`;
-    appDownUrl = `${dir}/${appInstallName}`;
+  } else {
+    appInstallName = `${getProductName()}-${version}.exe`;
   }
+  const appDownUrl = `${dir}/${appInstallName}`;
+
   if (appDownUrl && appInstallName) {
     const file = path.join(app.getPath('temp'), appInstallName);
     fs.exists(file, (exists: boolean) => {
