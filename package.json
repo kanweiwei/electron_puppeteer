@@ -1,7 +1,7 @@
 {
   "name": "ezy-deep-learning",
-  "productName": "EzyDeepLearning",
-  "version": "0.18.3",
+  "productName": "中育云校",
+  "version": "0.18.4",
   "description": "Electron application boilerplate based on React, React Router, Webpack, React Hot Loader for rapid application development",
   "scripts": {
     "build": "concurrently \"yarn build-main\" \"yarn build-renderer\"",
@@ -56,7 +56,7 @@
     ]
   },
   "build": {
-    "productName": "EzyDeepLearning",
+    "productName": "中育云校",
     "appId": "org.zykj.school.electronwebsite",
     "files": [
       "dist/",
@@ -81,14 +81,14 @@
       ]
     },
     "mac": {
-      "icon": "resources/zyyx_logo_512.png"
+      "icon": "resources/logo_512.png"
     },
     "win": {
       "target": [
         "nsis",
         "msi"
       ],
-      "icon": "resources/zyyx_logo_512.png"
+      "icon": "resources/logo_512.png"
     },
     "linux": {
       "target": [

@@ -24,9 +24,9 @@ const createWindow = async () => {
     frame: false,
     webPreferences: {
       nodeIntegration: true,
-      nodeIntegrationInWorker: true
+      nodeIntegrationInWorker: true,
       // nativeWindowOpen: true
-      // devTools: false
+      devTools: false
     }
   });
 

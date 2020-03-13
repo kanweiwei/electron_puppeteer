@@ -184,10 +184,13 @@ ipcMain.on('update', async e => {
 
   const dir = getAppDownloadDir();
   let appInstallName;
+  let ext;
   if (platform === 'darwin') {
     appInstallName = `${getProductName()}-${version}.dmg`;
+    ext = 'dmg';
   } else {
     appInstallName = `${getProductName()}-${version}.exe`;
+    ext = 'exe';
   }
   const appDownUrl = `${dir}/${appInstallName}`;
 
@@ -198,7 +201,11 @@ ipcMain.on('update', async e => {
         installer = file;
         return e.reply('update-percent', JSON.stringify({ percent: 1 }));
       }
-      progress(request(appDownUrl))
+      progress(
+        request(
+          `${dir}/${encodeURIComponent(getProductName())}-${version}.${ext}`
+        )
+      )
         .on('progress', state => {
           // 进度
           // const { time, speed, percent, size } = state;
